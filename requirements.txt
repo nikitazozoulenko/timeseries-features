@@ -1,0 +1,17 @@
+numpy
+pandas
+scipy
+plotly
+nbformat
+matplotlib
+tqdm
+joblib
+scikit-learn
+h5py
+tslearn
+cython==0.29.37
+numba
+torch
+torchvision
+torchaudio
+# git+https://github.com/crispitagorico/sigkernel.git
