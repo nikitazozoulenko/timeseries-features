@@ -3,8 +3,7 @@ from torch import Tensor
 from typing import List, Dict, Set, Any, Optional, Tuple, Literal, Callable
 
 
-def assert_ndim_geq(X:Tensor, 
-                    ndim:int):
+def assert_ndim_geq(X:Tensor, ndim:int):
     """Check if X has more than 'ndim' dimensions."""
     if X.ndim < ndim:
         raise ValueError(f"X must have at least {ndim+1} dimensions. Current shape:", X.shape)
@@ -12,10 +11,13 @@ def assert_ndim_geq(X:Tensor,
 
 
 
-def z_score_normalize(train:Tensor,
-                      test:Tensor,
-                      epsilon:float = 0.0001):
-    """Normalize 'train' and 'test' across axis=0 using mean and std
+def z_score_normalize(
+    train:Tensor,
+    test:Tensor,
+    epsilon:float = 0.0001,
+):
+    """
+    Normalize 'train' and 'test' across axis=0 using mean and std
     of 'train' only.
 
     Args:
@@ -35,9 +37,12 @@ def z_score_normalize(train:Tensor,
 
 
 
-def avg_pool_time(X:Tensor,
-                  pool_size:int = 1):
-    """Average pools the time dimension of X by pool_size.
+def avg_pool_time(
+    X:Tensor,
+    pool_size:int = 1,
+):
+    """
+    Average pools the time dimension of X by pool_size.
     
     Args:
         X (Tensor): Tensor with shape (..., T, d).
@@ -62,10 +67,13 @@ def avg_pool_time(X:Tensor,
 
 
 
-def augment_time(X:Tensor,
-                 min_val:float = 0.0,
-                 max_val:float = 1.0):
-    """Add time channel/dim to 'X' with values uniformly between 
+def augment_time(
+    X:Tensor,
+    min_val:float = 0.0,
+    max_val:float = 1.0,
+):
+    """
+    Add time channel/dim to 'X' with values uniformly between 
     'min_val' and 'max_val'.
 
     Args:
@@ -92,9 +100,12 @@ def augment_time(X:Tensor,
 
 
 
-def add_basepoint_zero(X:Tensor,
-                       first:bool = True):
-    """Add basepoint zero to 'X' in the time dimension.
+def add_basepoint_zero(
+    X:Tensor,
+    first:bool = True,
+):
+    """
+    Add basepoint zero to 'X' in the time dimension.
     
     Args:
         X (Tensor): Tensor with shape (..., T, d).
@@ -121,7 +132,8 @@ def add_basepoint_zero(X:Tensor,
 
 
 def I_visibility_transform(X:Tensor):
-    """Performs the I-visiblity transform on 'X', see page 5 of
+    """
+    Performs the I-visiblity transform on 'X', see page 5 of
     https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9412642
 
     Args:
@@ -148,7 +160,8 @@ def I_visibility_transform(X:Tensor):
 
 
 def T_visibility_transform(X:Tensor):
-    """Performs the T-visiblity transform on 'X', see page 5 of
+    """
+    Performs the T-visiblity transform on 'X', see page 5 of
     https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9412642
 
     Args:
