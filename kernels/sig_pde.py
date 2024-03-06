@@ -7,7 +7,7 @@ import os
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from kernels.static_kernels import StaticKernel, AbstractKernel
+from kernels.static_kernels import StaticKernel, AbstractKernel, RBFKernel
 
 
 class CrisStaticWrapper:
