@@ -12,10 +12,10 @@ def assert_ndim_geq(X:Tensor, ndim:int):
 
 
 def z_score_normalize(
-    train:Tensor,
-    test:Tensor,
-    epsilon:float = 0.0001,
-):
+        train:Tensor,
+        test:Tensor,
+        epsilon:float = 0.0001,
+    ):
     """
     Normalize 'train' and 'test' across axis=0 using mean and std
     of 'train' only.
@@ -38,9 +38,9 @@ def z_score_normalize(
 
 
 def avg_pool_time(
-    X:Tensor,
-    pool_size:int = 1,
-):
+        X:Tensor,
+        pool_size:int = 1,
+    ):
     """
     Average pools the time dimension of X by pool_size.
     
@@ -68,10 +68,10 @@ def avg_pool_time(
 
 
 def augment_time(
-    X:Tensor,
-    min_val:float = 0.0,
-    max_val:float = 1.0,
-):
+        X:Tensor,
+        min_val:float = 0.0,
+        max_val:float = 1.0,
+    ):
     """
     Add time channel/dim to 'X' with values uniformly between 
     'min_val' and 'max_val'.
@@ -101,9 +101,9 @@ def augment_time(
 
 
 def add_basepoint_zero(
-    X:Tensor,
-    first:bool = True,
-):
+        X:Tensor,
+        first:bool = True,
+    ):
     """
     Add basepoint zero to 'X' in the time dimension.
     
