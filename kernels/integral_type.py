@@ -19,7 +19,8 @@ class IntegralKernel(AbstractKernel):
             static_kernel:StaticKernel = RBFKernel,
         ):
         """
-        The integral kernel K(x, y) = \int k(x_t, y_t) dt, given a static kernel k(x, y).
+        The integral kernel K(x, y) = \int k(x_t, y_t) dt, given a static kernel 
+        k(x, y) on R^d.
 
         Args:
             static_kernel (StaticKernel): Static kernel on R^d.

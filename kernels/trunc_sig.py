@@ -1,9 +1,90 @@
+from typing import List, Dict, Set, Any, Optional, Tuple, Literal, Callable
+import numpy as np
+import torch
+from torch import Tensor
+import sigkernel
+import os
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+from kernels.static_kernels import StaticKernel, AbstractKernel, RBFKernel
 
 
+class TruncSigKernel(AbstractKernel):
+    def __init__(
+            self,
+            static_kernel:StaticKernel = RBFKernel,
+            trunc_level:int = 5,
+            geo_order:int = 1,
+            only_last:bool = True,
+        ):
+        """
+        The truncated signature kernel of two time series of 
+        shape (T_i, d) with respect to a static kernel on R^d.
+        See https://jmlr.org/papers/v20/16-314.html.
 
-############################################################################
-################# signature kernels of static kernels ######################
-############################################################################
+        Args:
+            static_kernel (StaticKernel): Static kernel on R^d.
+            trunc_level (int): Truncation level of the signature kernel.
+            geo_order (int): Geometric order of the rough path lift.
+            only_last (bool): If False, returns results of all truncation 
+                levels up to 'trunc_level'.
+        """
+        super().__init__()
+        self.static_kernel = static_kernel
+        self.trunc_level = trunc_level
+        self.geo_order = geo_order
+        self.only_last = only_last
+
+
+    def gram(
+            self, 
+            X: Tensor, 
+            Y: Tensor, 
+            diag: bool = False, 
+        ):
+        """
+        Computes the Gram matrix K(X_i, Y_j), or the diagonal K(X_i, Y_i) 
+        if diag=True. The time series in X and Y are assumed to be of shape 
+        (T1, d) and (T2, d) respectively. O(T^2(d + trunc_level*geo_order^2)) 
+        time for each pair of time series.
+
+        Args:
+            X (Tensor): Tensor with shape (N1, ..., T1, d).
+            Y (Tensor): Tensor with shape (N2, ..., T2, d), with (...) same as X.
+            diag (bool, optional): If True, only computes the kernel for the 
+                pairs K(X_i, Y_i). Defaults to False.
+
+        Returns:
+            Tensor: Tensor with shape (N1, N2, ...), or (N1, ...) if diag=True.
+        """
+        pass
+
+
+    def __call__(
+            self, 
+            X: Tensor, 
+            Y: Tensor, 
+        )->Tensor:
+        """
+        Computes the kernel evaluation k(X, Y) of two time series
+        (with batch support).
+
+        Args:
+            X (Tensor): Tensor with shape (... , T, d).
+            Y (Tensor): Tensor with shape (... , T, d), with (...) same as X.
+        
+        Returns:
+            Tensor: Tensor with shape (...).
+        """
+        pass
+
+
+#TODO: implement the 'gram' and '__call__' methods with a specified batch size.
+#TODO: THEN implement a method that loops through the batch size and computes the kernel.
+    
+
+
 
 
 def sig_kernel(s1:Tensor, 
