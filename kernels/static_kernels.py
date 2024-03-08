@@ -2,83 +2,16 @@ from typing import List, Dict, Set, Any, Optional, Tuple, Literal, Callable
 import numpy as np
 import torch
 from torch import Tensor
+import os
+import sys
 
-
-class AbstractKernel:
-    """Abstract kernel class."""
-
-    def gram(self, X: Tensor, Y: Tensor, diag: bool = False):
-        """
-        Computes the Gram matrix k(X_i, Y_j), or the diagonal k(X_i, Y_i) 
-        if diag=True.
-
-        Returns:
-            Tensor: Tensor with shape (N1, N2, ...) or (N1, ...) if diag=True.
-        """
-        raise NotImplementedError("Subclasses must implement gram method.")
-
-    def __call__(self, X: Tensor, Y: Tensor):
-        """
-        Computes the kernel evaluation k(X, Y) of two tensors (with batch support).
-        """
-        raise NotImplementedError("Subclasses must implement __call__ method.")
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+from kernels.abstract_base import StaticKernel
 
 
 ##########################################################################
 ######################## Static Kernels on R^d ###########################
 ##########################################################################
-
-
-class StaticKernel(AbstractKernel):
-    """Static kernel k : R^d x R^d -> R."""
-
-    def __init__(self):
-        super().__init__()
-    
-
-    def gram(
-            self, 
-            X: Tensor, 
-            Y: Tensor, 
-            diag: bool = False, 
-        )->Tensor:
-        """
-        Computes the Gram matrix k(X_i, Y_j), or the diagonal k(X_i, Y_i) 
-        if diag=True.
-
-        Args:
-            X (Tensor): Tensor with shape (N1, ... , d).
-            Y (Tensor): Tensor with shape (N2, ... , d).
-            diag (bool, optional): If True, only computes the kernel for the 
-                pairs k(X_i, Y_i). Defaults to False.
-
-        Returns:
-            Tensor: Tensor with shape (N1, N2, ...) or (N1, ...) if diag=True.
-        """
-        raise NotImplementedError("Subclasses must implement kernel_gram method.")
-    
-
-    def __call__(
-            self, 
-            X: Tensor, 
-            Y: Tensor, 
-        )->Tensor:
-        """
-        Computes the kernel evaluation k(X, Y) of two d-dimensional tensors
-        (with batch support).
-
-        Args:
-            X (Tensor): Tensor with shape (... , d).
-            Y (Tensor): Tensor with shape (... , d), with (...) same as X.
-        
-        Returns:
-            Tensor: Tensor with shape (...).
-        """
-        if X.ndim==1 and Y.ndim==1:
-            X = X.unsqueeze(0)
-            Y = Y.unsqueeze(0)
-        return self.gram(X, Y, diag=True)
-
 
 
 class LinearKernel(StaticKernel):

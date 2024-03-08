@@ -7,7 +7,8 @@ import os
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from kernels.static_kernels import StaticKernel, AbstractKernel, RBFKernel
+from kernels.abstract_base import StaticKernel, TimeSeriesKernel
+from kernels.static_kernels import RBFKernel
 
 
 class CrisStaticWrapper:
@@ -65,7 +66,7 @@ class CrisStaticWrapper:
     
     
 
-class SigPDEKernel(AbstractKernel):
+class SigPDEKernel(TimeSeriesKernel):
     def __init__(
             self,
             static_kernel: StaticKernel = RBFKernel(),
@@ -87,7 +88,7 @@ class SigPDEKernel(AbstractKernel):
         self.max_batch = max_batch
 
 
-    def gram(
+    def _gram(
             self, 
             X: Tensor, 
             Y: Tensor, 
@@ -111,28 +112,4 @@ class SigPDEKernel(AbstractKernel):
             return self.sig_ker.compute_kernel(X, Y, self.max_batch)
         else:
             return self.sig_ker.compute_Gram(X, Y, sym=(X is Y), max_batch=self.max_batch)
-
-
-    def __call__(
-            self, 
-            X: Tensor, 
-            Y: Tensor, 
-        )->Tensor:
-        """
-        Computes the kernel evaluation k(X, Y) of two time series 
-        (with batch support). The time series in X are of shape (T1, d), 
-        and the time series in Y are of shape (T2, d), where d is the 
-        path dimension.
-
-        Args:
-            X (Tensor): Tensor with shape (... , T1, d).
-            Y (Tensor): Tensor with shape (... , T2, d), with (...) same as X.
-        
-        Returns:
-            Tensor: Tensor with shape (...).
-        """
-        if X.ndim == 2 and Y.ndim == 2:
-            X = X.unsqueeze(0)
-            Y = Y.unsqueeze(0)
-        return self.sig_ker.compute_kernel(X, Y, self.max_batch)
 
