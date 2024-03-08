@@ -35,10 +35,7 @@ class CrisStaticWrapper:
         Returns:
             Tensor: Tensor of shape (N, T1, T2)
         """
-        X = X.transpose(1,0)
-        Y = Y.transpose(1,0)
-        trans_gram = self.kernel.gram(X, Y) # shape (T1, T2, N)
-        return trans_gram.permute(2, 0, 1)
+        return self.kernel.time_gram(X, Y, diag=True)
 
 
     def Gram_matrix(
@@ -56,13 +53,7 @@ class CrisStaticWrapper:
         Returns:
             Tensor: Tensor of shape (N1, N2, T1, T2)
         """
-        N1, T1, d = X.shape
-        N2, T2, d = Y.shape
-        X = X.reshape(-1, d)
-        Y = Y.reshape(-1, d)
-        flat_gram = self.kernel.gram(X, Y) # shape (N1 * T1, N2 * T2)
-        gram = flat_gram.reshape(N1, T1, N2, T2)
-        return gram.permute(0, 2, 1, 3)
+        return self.kernel.time_gram(X, Y, diag=False)
     
     
 
@@ -82,10 +73,10 @@ class SigPDEKernel(TimeSeriesKernel):
             dyadic_order (int, optional): Dyadic order in PDE solver. Defaults to 1.
             max_batch (int, optional): Max batch size for computations. Defaults to 10.
         """
+        super().__init__(max_batch=max_batch)
         self.static_wrapper = CrisStaticWrapper(static_kernel)
         self.dyadic_order = dyadic_order
         self.sig_ker = sigkernel.SigKernel(self.static_wrapper, dyadic_order)
-        self.max_batch = max_batch
 
 
     def _gram(

@@ -16,7 +16,7 @@ from kernels.static_kernels import PolyKernel
 class IntegralKernel(TimeSeriesKernel):
     def __init__(
             self,
-            static_kernel:StaticKernel = PolyKernel,
+            static_kernel:StaticKernel = PolyKernel(),
         ):
         """
         The integral kernel K(x, y) = \int k(x_t, y_t) dt, given a static kernel 

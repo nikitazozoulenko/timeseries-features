@@ -1,5 +1,4 @@
 from typing import List, Dict, Set, Any, Optional, Tuple, Literal, Callable
-import numpy as np
 import torch
 from torch import Tensor
 import os
@@ -77,7 +76,7 @@ class RBFKernel(StaticKernel):
             yy = self.lin_ker.gram(Y, Y, diag=True) #shape (N2, ...)
             norms_squared = -2*xy + xx[:, None] + yy[None, :] 
 
-        return self.scale * np.exp(-self.sigma * norms_squared)
+        return self.scale * torch.exp(-self.sigma * norms_squared)
 
 
 

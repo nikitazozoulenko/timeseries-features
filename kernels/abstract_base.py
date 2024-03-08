@@ -49,10 +49,45 @@ class StaticKernel():
         Returns:
             Tensor: Tensor with shape (...).
         """
-        if X.ndim==1 and Y.ndim==1:
+        if X.ndim==1:
             X = X.unsqueeze(0)
+        if Y.ndim==1:
             Y = Y.unsqueeze(0)
         return self.gram(X, Y, diag=True)
+    
+
+    def time_gram(
+            self, 
+            X: Tensor, 
+            Y: Tensor, 
+            diag: bool = False, 
+        )->Tensor:
+        """
+        Outputs k(X^i_s, Y^j_t), with optional diagonal support across
+        the batch dimension.
+
+        Args:
+            X (Tensor): Tensor with shape (N1, T1, d).
+            Y (Tensor): Tensor with shape (N2, T2, d).
+            diag (bool, optional): If True, only computes the kernel for the 
+                pairs k(X_i, Y_i). Defaults to False.
+
+        Returns:
+            Tensor: Tensor with shape (N1, N2, T1, T2) or (N1, T1, T2) if diag=True.
+        """
+        if diag:
+            X = X.transpose(1,0)
+            Y = Y.transpose(1,0)
+            trans_gram = self.gram(X, Y) # shape (T1, T2, N)
+            return trans_gram.permute(2, 0, 1)
+        else:
+            N1, T1, d = X.shape
+            N2, T2, d = Y.shape
+            X = X.reshape(-1, d)
+            Y = Y.reshape(-1, d)
+            flat_gram = self.gram(X, Y) # shape (N1 * T1, N2 * T2)
+            gram = flat_gram.reshape(N1, T1, N2, T2)
+            return gram.permute(0, 2, 1, 3)
     
 
 ##############################################################  |
