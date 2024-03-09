@@ -62,7 +62,8 @@ class SigPDEKernel(TimeSeriesKernel):
             self,
             static_kernel: StaticKernel = RBFKernel(),
             dyadic_order:int = 1,
-            max_batch:int = 10,
+            max_batch:int = 100,
+            normalize: bool = False,
         ):
         """
         Signature PDE kernel for timeseries (x_1, ..., x_T) in R^d,
@@ -72,8 +73,9 @@ class SigPDEKernel(TimeSeriesKernel):
             static_kernel (StaticKernel): Static kernel on R^d.
             dyadic_order (int, optional): Dyadic order in PDE solver. Defaults to 1.
             max_batch (int, optional): Max batch size for computations. Defaults to 10.
+            normalize (bool, optional): If True, normalizes the kernel. Defaults to False.
         """
-        super().__init__(max_batch=max_batch)
+        super().__init__(max_batch, normalize)
         self.static_wrapper = CrisStaticWrapper(static_kernel)
         self.dyadic_order = dyadic_order
         self.sig_ker = sigkernel.SigKernel(self.static_wrapper, dyadic_order)
@@ -84,5 +86,5 @@ class SigPDEKernel(TimeSeriesKernel):
             X: Tensor, 
             Y: Tensor, 
         ):
-        return self.sig_ker.compute_Gram(X, Y, sym=(X is Y))
+        return self.sig_ker.compute_kernel(X, Y)
 

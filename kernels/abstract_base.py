@@ -174,7 +174,7 @@ class TimeSeriesKernel():
         normalize = normalize if normalize is not None else self.normalize
 
         # get indices pairs
-        if X is Y and diag:
+        if diag:
             indices = torch.arange(N1).tile(2,1) # shape (2, N)
         elif X is Y:
             indices = torch.triu_indices(N1, N1) #shape (2, N*(N+1)//2)
@@ -190,7 +190,7 @@ class TimeSeriesKernel():
         extra = result[0].shape
 
         # reshape back
-        if X is Y and diag:
+        if diag:
             result = result.reshape( (N1,) + extra )
         elif X is Y:
             populate = torch.empty((N1, N1) + extra, device=device, dtype=X.dtype)
@@ -199,7 +199,19 @@ class TimeSeriesKernel():
             result = populate
         else:
             result = result.reshape( (N1, N2) + extra )
-        return result
     
         # normalize
-        #TODO
+        if normalize:
+            if diag:
+                XX = self(X, X, diag=True, normalize=False) #shape (N1, ...)
+                YY = self(Y, Y, diag=True, normalize=False) #shape (N1, ...)
+                result = result / torch.sqrt(XX) / torch.sqrt(YY) #shape (N1, ...)
+            elif X is Y:
+                diagonal = torch.einsum('ii...->i...', result) #shape (N1, ...)
+                result = result / torch.sqrt(diagonal[:, None]) / torch.sqrt(diagonal[None, :]) #shape (N1, N1, ...)
+            else:
+                XX = self(X, X, diag=True, normalize=False) #shape (N1, ...)
+                YY = self(Y, Y, diag=True, normalize=False) #shape (N2, ...)
+                result = result / torch.sqrt(XX[:, None]) / torch.sqrt(YY[None, :]) #shape (N1, N2, ...)
+                
+        return result

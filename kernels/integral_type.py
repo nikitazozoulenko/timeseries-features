@@ -13,10 +13,12 @@ from kernels.static_kernels import PolyKernel
 ################### Time series Integral Kernel of static kernel ######################
 #######################################################################################
 
-class IntegralKernel(TimeSeriesKernel):
+class StaticIntegralKernel(TimeSeriesKernel):
     def __init__(
             self,
             static_kernel:StaticKernel = PolyKernel(),
+            max_batch:int = 10000,
+            normalize:bool = False,
         ):
         """
         The integral kernel K(x, y) = \int k(x_t, y_t) dt, given a static kernel 
@@ -25,7 +27,7 @@ class IntegralKernel(TimeSeriesKernel):
         Args:
             static_kernel (StaticKernel): Static kernel on R^d.
         """
-        super().__init__()
+        super().__init__(max_batch, normalize)
         self.static_kernel = static_kernel
 
 

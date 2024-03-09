@@ -69,7 +69,7 @@ def trunc_sigker(
             for s in range(1, d):
                 A[..., r, s, :, :] = 1/(r+1)/(s+1) * nabla * AA[..., r-1, s-1, :, :]
         # save
-        results[..., n] = 1 + 1 + A.sum(dim = (-4, -3, -2, -1))
+        results[..., n] = 1 + A.sum(dim = (-4, -3, -2, -1))
     
     if only_last:
         return results[..., -1]
@@ -84,6 +84,8 @@ class TruncSigKernel(TimeSeriesKernel):
             trunc_level:int = 5,
             geo_order:int = 1,
             only_last:bool = True,
+            max_batch:int = 100,
+            normalize:bool = False,
         ):
         """
         The truncated signature kernel of two time series of 
@@ -102,8 +104,10 @@ class TruncSigKernel(TimeSeriesKernel):
                 to be less than or equal to 'trunc_level'.
             only_last (bool): If False, returns results of all truncation 
                 levels up to 'trunc_level'.
+            max_batch (int, optional): Max batch size for computations.
+            normalize (bool, optional): If True, normalizes the kernel.
         """
-        super().__init__()
+        super().__init__(max_batch, normalize)
         assert geo_order <= trunc_level, "geo_order has to be less than or equal to trunc_level."
         assert geo_order > 0, "geo_order has to be greater than 0."
         self.static_kernel = static_kernel
