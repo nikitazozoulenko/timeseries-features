@@ -191,7 +191,7 @@ class TimeSeriesKernel():
 
         # reshape back
         if X is Y and diag:
-            result = result.reshape( (N1) + extra )
+            result = result.reshape( (N1,) + extra )
         elif X is Y:
             populate = torch.empty((N1, N1) + extra, device=device, dtype=X.dtype)
             for i, (ix, iy) in enumerate(indices.T):

@@ -35,7 +35,8 @@ def cumsum_shift1(X:Tensor, dim:int):
 def trunc_sigker(
         nabla:Tensor, 
         trunc_level:int, 
-        geo_order:int
+        geo_order:int,
+        only_last:bool,
     ):
     """
     Computes the truncated signature kernel given a matrix 
@@ -51,23 +52,29 @@ def trunc_sigker(
     sh = nabla.shape
     A = torch.zeros(sh[:-2]+(geo_order, geo_order)+sh[-2:],
                     device=nabla.device, dtype=nabla.dtype)
-    for n in range(1, trunc_level+1):
+    results = torch.zeros( sh[:-2]+(trunc_level,),
+                          device=nabla.device, dtype=nabla.dtype)
+    for n in range(trunc_level):
         AA = A.clone()
         Asum0 = AA.sum(dim=-4)
         Asum1 = AA.sum(dim=-3)
         Asum01 = Asum0.sum(dim=-3)
         A[..., 0, 0, :, :] = nabla * (1+cumsum_shift1(cumsum_shift1(Asum01, dim=-1), dim=-2))
         
-        d = min(n, geo_order)
+        d = min(n+1, geo_order)
         for r in range(1, d):
             A[..., r, 0, :, :] = 1/(r+1) * nabla * cumsum_shift1(Asum1[..., r-1, :, :], dim=-2)
             A[..., 0, r, :, :] = 1/(r+1) * nabla * cumsum_shift1(Asum0[..., r-1, :, :], dim=-1)
 
             for s in range(1, d):
                 A[..., r, s, :, :] = 1/(r+1)/(s+1) * nabla * AA[..., r-1, s-1, :, :]
+        # save
+        results[..., n] = 1 + 1 + A.sum(dim = (-4, -3, -2, -1))
     
-    return 1 + A.sum(dim = (-4, -3, -2, -1))
-
+    if only_last:
+        return results[..., -1]
+    else:
+        return results
 
 
 class TruncSigKernel(TimeSeriesKernel):
@@ -76,6 +83,7 @@ class TruncSigKernel(TimeSeriesKernel):
             static_kernel:StaticKernel = RBFKernel(),
             trunc_level:int = 5,
             geo_order:int = 1,
+            only_last:bool = True,
         ):
         """
         The truncated signature kernel of two time series of 
@@ -84,7 +92,8 @@ class TruncSigKernel(TimeSeriesKernel):
         'geo_order' is the geometric order of the rough path lift, 
         where geo_order=trunc_level corresponds to the exact signature
         of the piecewise linear path, and geo_order=1 corresponds to
-        a discretization of the signature.
+        a discretization of the signature. O(T^2(d + trunc_level*geo_order^2)) 
+        time for each pair of time series.
 
         Args:
             static_kernel (StaticKernel): Static kernel on R^d.
@@ -95,9 +104,12 @@ class TruncSigKernel(TimeSeriesKernel):
                 levels up to 'trunc_level'.
         """
         super().__init__()
+        assert geo_order <= trunc_level, "geo_order has to be less than or equal to trunc_level."
+        assert geo_order > 0, "geo_order has to be greater than 0."
         self.static_kernel = static_kernel
         self.trunc_level = trunc_level
         self.geo_order = geo_order
+        self.only_last = only_last
 
 
     def _batched_ker(
@@ -123,4 +135,4 @@ class TruncSigKernel(TimeSeriesKernel):
         # nabla_st = K[s+1, t+1] + K[s, t] - K[s+1, t] - K[s, t+1] in time
         K = self.static_kernel.time_gram(X, Y, diag=True)
         nabla = K.diff(dim=-1).diff(dim=-2) # shape (N, T1, T2)
-        return trunc_sigker(nabla, self.trunc_level, self.geo_order)
+        return trunc_sigker(nabla, self.trunc_level, self.geo_order, self.only_last)
