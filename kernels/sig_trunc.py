@@ -1,8 +1,6 @@
 from typing import List, Dict, Set, Any, Optional, Tuple, Literal, Callable
-import numpy as np
 import torch
 from torch import Tensor
-import sigkernel
 import os
 import sys
 
