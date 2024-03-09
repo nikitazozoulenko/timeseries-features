@@ -29,15 +29,14 @@ class IntegralKernel(TimeSeriesKernel):
         self.static_kernel = static_kernel
 
 
-    def _gram(
+    def _batched_ker(
             self, 
             X: Tensor, 
             Y: Tensor, 
-            diag: bool = False, 
         ):
-        #Shape (N1, N2, T), or (N1, T) if diag=True
-        ijKt = self.static_kernel.gram(X, Y, diag)
+        # Shape (N, T)
+        iKt = self.static_kernel(X, Y, diag=True)
 
         #return integral of k(x_t, y_t) dt for each pair x and y
         T = X.shape[-2]
-        return torch.trapz(ijKt, dx=1/(T-1), axis=-1)
+        return torch.trapz(iKt, dx=1/(T-1), axis=-1)

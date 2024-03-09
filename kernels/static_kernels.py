@@ -28,7 +28,7 @@ class LinearKernel(StaticKernel):
         self.scale = scale
     
 
-    def gram(
+    def _gram(
             self, 
             X: Tensor, 
             Y: Tensor, 
@@ -61,7 +61,7 @@ class RBFKernel(StaticKernel):
         self.lin_ker = LinearKernel(scale=1.0)
     
 
-    def gram(
+    def _gram(
             self, 
             X: Tensor, 
             Y: Tensor, 
@@ -69,11 +69,11 @@ class RBFKernel(StaticKernel):
         )-> Tensor:
         if diag:
             diff = X-Y
-            norms_squared = self.lin_ker.gram(diff, diff, diag=True) #shape (N1, ...)
+            norms_squared = self.lin_ker(diff, diff, diag=True) #shape (N1, ...)
         else:
-            xx = self.lin_ker.gram(X, X, diag=True) #shape (N1, ...)
-            xy = self.lin_ker.gram(X, Y, diag=False) #shape (N1, N2, ...)
-            yy = self.lin_ker.gram(Y, Y, diag=True) #shape (N2, ...)
+            xx = self.lin_ker(X, X, diag=True) #shape (N1, ...)
+            xy = self.lin_ker(X, Y, diag=False) #shape (N1, N2, ...)
+            yy = self.lin_ker(Y, Y, diag=True) #shape (N2, ...)
             norms_squared = -2*xy + xx[:, None] + yy[None, :] 
 
         return self.scale * torch.exp(-self.sigma * norms_squared)
@@ -102,10 +102,10 @@ class PolyKernel(StaticKernel):
         self.lin_ker = LinearKernel(scale)
     
 
-    def gram(
+    def _gram(
             self, 
             X: Tensor, 
             Y: Tensor, 
             diag: bool = False, 
         )->Tensor:
-        return (self.lin_ker.gram(X, Y, diag) + self.c)**self.p
+        return (self.lin_ker(X, Y, diag) + self.c)**self.p

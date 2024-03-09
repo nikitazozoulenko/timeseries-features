@@ -79,28 +79,10 @@ class SigPDEKernel(TimeSeriesKernel):
         self.sig_ker = sigkernel.SigKernel(self.static_wrapper, dyadic_order)
 
 
-    def _gram(
+    def _batched_ker(
             self, 
             X: Tensor, 
             Y: Tensor, 
-            diag: bool = False, 
         ):
-        """
-        Computes the Gram matrix K(X_i, Y_j), or the diagonal K(X_i, Y_i) 
-        if diag=True. The time series in X are of shape (T1, d), and the
-        time series in Y are of shape (T2, d), where d is the path dimension.
-
-        Args:
-            X (Tensor): Tensor with shape (N1, T1, d).
-            Y (Tensor): Tensor with shape (N2, T2, d).
-            diag (bool, optional): If True, only computes the kernel for the 
-                pairs K(X_i, Y_i). Defaults to False.
-
-        Returns:
-            Tensor: Tensor with shape (N1, N2), or (N1) if diag=True.
-        """
-        if diag:
-            return self.sig_ker.compute_kernel(X, Y, self.max_batch)
-        else:
-            return self.sig_ker.compute_Gram(X, Y, sym=(X is Y), max_batch=self.max_batch)
+        return self.sig_ker.compute_Gram(X, Y, sym=(X is Y))
 
