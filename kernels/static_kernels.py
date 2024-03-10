@@ -76,7 +76,7 @@ class RBFKernel(StaticKernel):
             yy = self.lin_ker(Y, Y, diag=True) #shape (N2, ...)
             norms_squared = -2*xy + xx[:, None] + yy[None, :] 
 
-        return self.scale * torch.exp(-self.sigma * norms_squared)
+        return self.scale * torch.exp( -norms_squared/(2*self.sigma**2) )
 
 
 

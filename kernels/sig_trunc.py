@@ -29,6 +29,7 @@ def cumsum_shift1(X:Tensor, dim:int):
     return Q
 
 
+# 3x faster compared to the ksig library
 @torch.jit.script
 def trunc_sigker(
         nabla:Tensor, 
