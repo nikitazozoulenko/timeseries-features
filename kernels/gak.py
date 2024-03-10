@@ -8,8 +8,8 @@ import random
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from kernels.abstract_base import TimeSeriesKernel, StaticKernel
 from kernels.static_kernels import RBFKernel, LinearKernel
-
 import random
+
 
 def sigma_gak(
         X:Tensor,
@@ -94,11 +94,16 @@ def log_global_align(
 
 
 
+########################################################  |
+################### GAK Kernel class ###################  |
+######################################################## \|/
+
+
 class GlobalAlignmentKernel(TimeSeriesKernel):
     def __init__(
             self,
             static_kernel:StaticKernel = RBFKernel(),
-            max_batch:int = 500,
+            max_batch:int = 1000,
             normalize:bool = True,
         ):
         """
