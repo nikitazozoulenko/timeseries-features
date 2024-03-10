@@ -5,6 +5,13 @@ from joblib import Parallel, delayed
 from torch import Tensor
 
 
+def is_documented_by(original):
+    def wrapper(target):
+        target.__doc__ = original.__doc__
+        return target
+    return wrapper
+
+
 ##########################################  |
 #### Static kernel k : R^d x R^d -> R ####  |
 ########################################## \|/
@@ -113,6 +120,11 @@ class TimeSeriesKernel():
         self.normalize = normalize
 
 
+    @property
+    def log_space(self):
+        return False
+
+
     def _batched_ker(
             self, 
             X: Tensor, 
@@ -133,15 +145,15 @@ class TimeSeriesKernel():
         raise NotImplementedError("Subclasses must implement '_batched_ker' method.")
 
 
-    def __call__(
-            self, 
-            X: Tensor, 
+    def _max_batched_gram(
+            self,
+            X: Tensor,
             Y: Tensor,
-            diag: bool = False,
-            max_batch: Optional[int] = None,
-            normalize: Optional[bool] = None,
-            n_jobs: int = 1,
-        )->Tensor:
+            diag: bool,
+            max_batch: Optional[int],
+            normalize: Optional[bool],
+            n_jobs: int,
+        ):
         """
         Computes the Gram matrix k(X_i, Y_j) for time series X_i and Y_j, 
         or the diagonal k(X_i, Y_i) if diag=True.
@@ -162,24 +174,20 @@ class TimeSeriesKernel():
             Tensor: Tensor with shape (N1, N2, ...) or (N1, ...) if diag=True,
                 where (...) is the dimension of the kernel output.
         """
-        # Reshape
-        if X.ndim==2:
-            X = X.unsqueeze(0)
-        if Y.ndim==2:
-            Y = Y.unsqueeze(0)
         N1, T, d = X.shape
         N2, _, _ = Y.shape
-        device = X.device #TODO should i add this?
+        device = X.device
         max_batch = max_batch if max_batch is not None else self.max_batch
         normalize = normalize if normalize is not None else self.normalize
 
         # get indices pairs
         if diag:
-            indices = torch.arange(N1).tile(2,1) # shape (2, N)
+            indices = torch.arange(N1, device=device).tile(2,1) # shape (2, N)
         elif X is Y:
-            indices = torch.triu_indices(N1, N1) #shape (2, N*(N+1)//2)
+            indices = torch.triu_indices(N1, N1, device=device) #shape (2, N*(N+1)//2)
         else:
-            indices = torch.cartesian_prod(torch.arange(N1), torch.arange(N2)).T #shape (2, N1*N2)
+            indices = torch.cartesian_prod(torch.arange(N1, device=device), 
+                                           torch.arange(N2, device=device)).T #shape (2, N1*N2)
 
         # split into batches
         split = torch.split(indices, max_batch, dim=1)
@@ -196,6 +204,7 @@ class TimeSeriesKernel():
             populate = torch.empty((N1, N1) + extra, device=device, dtype=X.dtype)
             for i, (ix, iy) in enumerate(indices.T):
                 populate[ix, iy] = result[i]
+                populate[iy, ix] = result[i]
             result = populate
         else:
             result = result.reshape( (N1, N2) + extra )
@@ -203,15 +212,53 @@ class TimeSeriesKernel():
         # normalize
         if normalize:
             if diag:
-                XX = self(X, X, diag=True, normalize=False) #shape (N1, ...)
-                YY = self(Y, Y, diag=True, normalize=False) #shape (N1, ...)
-                result = result / torch.sqrt(XX) / torch.sqrt(YY) #shape (N1, ...)
+                XX = self._max_batched_gram(X, X, True, max_batch, False, n_jobs) #shape (N, ...)
+                YY = self._max_batched_gram(Y, Y, True, max_batch, False, n_jobs) #shape (N, ...)
+                if self.log_space:
+                    result = result - 0.5*(XX + YY) #shape (N, ...)
+                else:
+                    result = result / torch.sqrt(XX) / torch.sqrt(YY)
+            
             elif X is Y:
-                diagonal = torch.einsum('ii...->i...', result) #shape (N1, ...)
-                result = result / torch.sqrt(diagonal[:, None]) / torch.sqrt(diagonal[None, :]) #shape (N1, N1, ...)
+                diagonal = torch.einsum('ii...->i...', result) #shape (N, ...)
+                if self.log_space:
+                    result = result - 0.5*(diagonal[:, None] + diagonal[None, :]) #shape (N, N, ...)
+                else:
+                    result = result / torch.sqrt(diagonal[:, None]) / torch.sqrt(diagonal[None, :])
+            
             else:
-                XX = self(X, X, diag=True, normalize=False) #shape (N1, ...)
-                YY = self(Y, Y, diag=True, normalize=False) #shape (N2, ...)
-                result = result / torch.sqrt(XX[:, None]) / torch.sqrt(YY[None, :]) #shape (N1, N2, ...)
-                
+                XX = self._max_batched_gram(X, X, True, max_batch, False, n_jobs) #shape (N1, ...)
+                YY = self._max_batched_gram(Y, Y, True, max_batch, False, n_jobs) #shape (N2, ...)
+                XX = XX[:, None]
+                YY = YY[None, :]
+                if self.log_space:
+                    result = result - 0.5*(XX + YY) #shape (N1, N2, ...) or (N1, ...) if diag==True
+                else:
+                    result = result / torch.sqrt(XX) / torch.sqrt(YY)
+                    
+        return result
+
+
+    @is_documented_by(_max_batched_gram)
+    def __call__(
+            self, 
+            X: Tensor, 
+            Y: Tensor,
+            diag: bool = False,
+            max_batch: Optional[int] = None,
+            normalize: Optional[bool] = None,
+            n_jobs: int = 1,
+        )->Tensor:
+
+        # Reshape
+        if X.ndim==2:
+            X = X.unsqueeze(0)
+        if Y.ndim==2:
+            Y = Y.unsqueeze(0)
+
+        # Compute and exponentiate if in log space
+        result = self._max_batched_gram(X, Y, diag, max_batch, normalize, n_jobs)
+        if self.log_space:
+            result = torch.exp(result)
+
         return result
