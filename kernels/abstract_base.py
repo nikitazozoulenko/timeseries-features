@@ -121,7 +121,7 @@ class StaticKernel():
             diag (bool, optional): If True, only computes the kernel for the
 
         Returns:
-            Tensor: Tensor with shape (N1, N2, ...).
+            Tensor: Tensor with shape (N1, N2, ...) or (N1, ...) if diag=True.
         """
         if diag:
             diff = X-Y
