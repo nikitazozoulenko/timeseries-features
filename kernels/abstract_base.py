@@ -104,6 +104,37 @@ class StaticKernel():
             return gram.permute(0, 2, 1, 3)
     
 
+    def squared_dist(
+            self, 
+            X: Tensor, 
+            Y: Tensor,
+            diag: bool = False,
+        )->Tensor:
+        """
+        Computes the squared distance matrix between X and Y, i.e. 
+        ||X_i - Y_j||^2, or the diagonal ||X_i - Y_i||^2 if diag=True,
+        where ||.|| is the norm induced by the kernel.
+
+        Args:
+            X (Tensor): Tensor with shape (N1, ..., d).
+            Y (Tensor): Tensor with shape (N2, ..., d).
+            diag (bool, optional): If True, only computes the kernel for the
+
+        Returns:
+            Tensor: Tensor with shape (N1, N2, ...).
+        """
+        if diag:
+            diff = X-Y
+            norms_squared = self(diff, diff, diag=True) #shape (N1, ...)
+        else:
+            xx = self(X, X, diag=True) #shape (N1, ...)
+            xy = self(X, Y, diag=False) #shape (N1, N2, ...)
+            yy = self(Y, Y, diag=True) #shape (N2, ...)
+            norms_squared = -2*xy + xx[:, None] + yy[None, :]
+
+        return norms_squared
+
+
 ##################################################################  |
 #### Time series kernels k : R^(T1 x d) x R^(T2 x d) -> (...) ####  |
 ################################################################## \|/

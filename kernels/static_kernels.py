@@ -67,15 +67,8 @@ class RBFKernel(StaticKernel):
             Y: Tensor, 
             diag: bool = False, 
         )-> Tensor:
-        if diag:
-            diff = X-Y
-            norms_squared = self.lin_ker(diff, diff, diag=True) #shape (N1, ...)
-        else:
-            xx = self.lin_ker(X, X, diag=True) #shape (N1, ...)
-            xy = self.lin_ker(X, Y, diag=False) #shape (N1, N2, ...)
-            yy = self.lin_ker(Y, Y, diag=True) #shape (N2, ...)
-            norms_squared = -2*xy + xx[:, None] + yy[None, :] 
 
+        norms_squared = self.lin_ker.squared_dist(X, Y, diag)
         return self.scale * torch.exp( -norms_squared/(2*self.sigma**2) )
 
 
