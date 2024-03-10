@@ -214,8 +214,6 @@ class TimeSeriesKernel():
         # get indices pairs
         if diag:
             indices = torch.arange(N1, device=device).tile(2,1) # shape (2, N)
-        elif X is Y:
-            indices = torch.triu_indices(N1, N1, device=device) #shape (2, N*(N+1)//2)
         else:
             indices = torch.cartesian_prod(torch.arange(N1, device=device), 
                                            torch.arange(N2, device=device)).T #shape (2, N1*N2)
@@ -223,7 +221,7 @@ class TimeSeriesKernel():
         # split into batches
         split = torch.split(indices, max_batch, dim=1)
         result = Parallel(n_jobs=n_jobs)(
-            delayed(self._batched_ker)(X[ix], Y[iy])  #self._gram(X[ix], Y[iy], diag=True)
+            delayed(self._batched_ker)(X[ix], Y[iy])
             for ix,iy in split)
         result = torch.cat(result, dim=0)
         extra = result[0].shape
@@ -231,42 +229,29 @@ class TimeSeriesKernel():
         # reshape back
         if diag:
             result = result.reshape( (N1,) + extra )
-        elif X is Y:
-            populate = torch.empty((N1, N1) + extra, device=device, dtype=X.dtype)
-            for i, (ix, iy) in enumerate(indices.T):
-                populate[ix, iy] = result[i]
-                populate[iy, ix] = result[i]
-            result = populate
         else:
             result = result.reshape( (N1, N2) + extra )
     
         # normalize
         if normalize:
-            if diag:
-                XX = self._max_batched_gram(X, X, True, max_batch, False, n_jobs) #shape (N, ...)
-                YY = self._max_batched_gram(Y, Y, True, max_batch, False, n_jobs) #shape (N, ...)
-                if self.log_space:
-                    result = result - 0.5*(XX + YY) #shape (N, ...)
-                else:
-                    result = result / torch.sqrt(XX) / torch.sqrt(YY)
-            
-            elif X is Y:
+            #Obtain the diagonals XX and YY
+            if X is Y:
                 diagonal = torch.einsum('ii...->i...', result) #shape (N, ...)
-                if self.log_space:
-                    result = result - 0.5*(diagonal[:, None] + diagonal[None, :]) #shape (N, N, ...)
-                else:
-                    result = result / torch.sqrt(diagonal[:, None]) / torch.sqrt(diagonal[None, :])
-            
+                XX = diagonal
+                YY = diagonal
             else:
                 XX = self._max_batched_gram(X, X, True, max_batch, False, n_jobs) #shape (N1, ...)
                 YY = self._max_batched_gram(Y, Y, True, max_batch, False, n_jobs) #shape (N2, ...)
-                XX = XX[:, None]
-                YY = YY[None, :]
-                if self.log_space:
-                    result = result - 0.5*(XX + YY) #shape (N1, N2, ...) or (N1, ...) if diag==True
-                else:
-                    result = result / torch.sqrt(XX) / torch.sqrt(YY)
-                    
+            if not diag:
+                XX = XX[:, None] #shape (N1, 1, ...)
+                YY = YY[None, :] #shape (1, N2, ...)
+
+            # Normalize with diagonals
+            if self.log_space:
+                result = result - 0.5*XX - 0.5*YY
+            else:
+                result = result / torch.sqrt(XX) / torch.sqrt(YY)
+
         return result
 
 
