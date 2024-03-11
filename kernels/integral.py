@@ -13,6 +13,7 @@ from kernels.static_kernels import PolyKernel
 ################### Time series Integral Kernel of static kernel ######################
 #######################################################################################
 
+
 class StaticIntegralKernel(TimeSeriesKernel):
     def __init__(
             self,
@@ -31,14 +32,16 @@ class StaticIntegralKernel(TimeSeriesKernel):
         self.static_kernel = static_kernel
 
 
-    def _batched_ker(
+    #TODO implement for T1 != T2
+    def _gram(
             self, 
             X: Tensor, 
-            Y: Tensor, 
+            Y: Tensor,
+            diag: bool,
         ):
         # Shape (N, T)
-        iKt = self.static_kernel(X, Y, diag=True)
+        ijKt = self.static_kernel(X, Y, diag=True)
 
         #return integral of k(x_t, y_t) dt for each pair x and y
         T = X.shape[-2]
-        return torch.trapz(iKt, dx=1/(T-1), axis=-1)
+        return torch.trapz(ijKt, dx=1/(T-1), axis=-1)

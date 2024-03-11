@@ -1,4 +1,6 @@
 from typing import List, Dict, Set, Any, Optional, Tuple, Literal, Callable
+import itertools
+
 import numpy as np
 import torch
 from joblib import Parallel, delayed
@@ -156,24 +158,27 @@ class TimeSeriesKernel():
         return False
 
 
-    def _batched_ker(
+    def _gram(
             self, 
             X: Tensor, 
-            Y: Tensor, 
+            Y: Tensor,
+            diag: bool,
         ):
         """
-        Method to be implemented by subclass. Computes the batched Gram matrix 
-        k(X_i, Y_i) for time series X_i and Y_i.
+        Method to be implemented by subclass. Computes the Gram matrix 
+        k(X_i, Y_j) for time series X_i and Y_j, or the diagonal k(X_i, Y_i)
+        if diag=True.
 
         Args:
-            X (Tensor): Tensor with shape (N, T, d).
-            Y (Tensor): Tensor with shape (N, T, d).
+            X (Tensor): Tensor with shape (N1, T, d).
+            Y (Tensor): Tensor with shape (N2, T, d).
+            diag (bool): If True, only computes the diagonal k(X_i, Y_i).
 
         Returns:
-            Tensor: Tensor with shape (N, ...) where (...) is the dimension 
-                of the kernel output.
+            Tensor: Tensor with shape (N1, N2, ...) or (N1, ...) if diag=True,
+             where  (...) is the dimension of the kernel output.
         """
-        raise NotImplementedError("Subclasses must implement '_batched_ker' method.")
+        raise NotImplementedError("Subclasses must implement '_gram' method.")
 
 
     def _max_batched_gram(
@@ -207,34 +212,30 @@ class TimeSeriesKernel():
         """
         N1, T, d = X.shape
         N2, _, _ = Y.shape
-        device = X.device
         max_batch = max_batch if max_batch is not None else self.max_batch
         normalize = normalize if normalize is not None else self.normalize
 
-        # get indices pairs
-        if diag:
-            indices = torch.arange(N1, device=device).tile(2,1) # shape (2, N)
-        else:
-            indices = torch.cartesian_prod(torch.arange(N1, device=device), 
-                                           torch.arange(N2, device=device)).T #shape (2, N1*N2)
-
         # split into batches
-        split = torch.split(indices, max_batch, dim=1)
+        split_X = torch.split(X, max_batch, dim=0)
+        Y_max_batch = max(1, max_batch//N1)
+        split_Y = torch.split(Y, Y_max_batch, dim=0)
+        split = zip(split_X, split_X) if diag else itertools.product(split_X, split_Y)
         result = Parallel(n_jobs=n_jobs)(
-            delayed(self._batched_ker)(X[ix], Y[iy])
-            for ix,iy in split)
-        result = torch.cat(result, dim=0)
-        extra = result[0].shape
+            delayed(self._gram)(x, y, diag) for x,y in split
+            )
 
         # reshape back
         if diag:
-            result = result.reshape( (N1,) + extra )
+            result = torch.cat(result, dim=0)
+        elif max_batch >= N1:
+            result = torch.cat(result, dim=1)
         else:
-            result = result.reshape( (N1, N2) + extra )
+            extra = result[0].shape[2:]
+            result = torch.cat(result, dim=0).reshape( (N1, N2)+extra )
     
         # normalize
         if normalize:
-            #Obtain the diagonals XX and YY
+            #Obtain the diagonals k(X,X) and K(Y,Y)
             if X is Y:
                 diagonal = torch.einsum('ii...->i...', result) #shape (N, ...)
                 XX = diagonal
@@ -246,7 +247,7 @@ class TimeSeriesKernel():
                 XX = XX[:, None] #shape (N1, 1, ...)
                 YY = YY[None, :] #shape (1, N2, ...)
 
-            # Normalize with diagonals
+            # Normalize with diagonals k(X,Y) = k(X,Y) / sqrt(k(X,X) * k(Y,Y))
             if self.log_space:
                 result = result - 0.5*XX - 0.5*YY
             else:

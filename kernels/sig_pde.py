@@ -81,10 +81,14 @@ class SigPDEKernel(TimeSeriesKernel):
         self.sig_ker = sigkernel.SigKernel(self.static_wrapper, dyadic_order)
 
 
-    def _batched_ker(
+    def _gram(
             self, 
             X: Tensor, 
-            Y: Tensor, 
+            Y: Tensor,
+            diag: bool,
         ):
-        return self.sig_ker.compute_kernel(X, Y)
+        if diag:
+            return self.sig_ker.compute_kernel(X, Y)
+        else:
+            return self.sig_ker.compute_Gram(X, Y)
 

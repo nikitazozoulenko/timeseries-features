@@ -29,9 +29,8 @@ def cumsum_shift1(X:Tensor, dim:int):
     return Q
 
 
-# sligtly faster than the ksig library
 @torch.jit.script
-def trunc_sigker(
+def trunc_sigker_geoGEQ2(
         nabla:Tensor, 
         trunc_level:int, 
         geo_order:int,
@@ -47,11 +46,10 @@ def trunc_sigker(
         trunc_level (int): Truncation level of the signature.
         geo_order (int): Geometric order of the rough path lift.
     """
-    # A shape is (..., geo_order, geo_order, T1, T2)
     sh = nabla.shape
     A = torch.zeros(sh[:-2]+(geo_order, geo_order)+sh[-2:],
                     device=nabla.device, dtype=nabla.dtype)
-    results = torch.zeros( sh[:-2]+(trunc_level,),
+    results = torch.empty( sh[:-2]+(trunc_level,),
                           device=nabla.device, dtype=nabla.dtype)
     for n in range(trunc_level):
         AA = A.clone()
@@ -70,6 +68,36 @@ def trunc_sigker(
         # save
         results[..., n] = 1 + A.sum(dim = (-4, -3, -2, -1))
     
+    if only_last:
+        return results[..., -1]
+    else:
+        return results
+    
+
+@torch.jit.script
+def trunc_sigker_geo1(
+        nabla:Tensor, 
+        trunc_level:int, 
+        only_last:bool,
+    ):
+    """
+    Computes the non-geometric truncated signature kernel given a matrix 
+    nabla[s,t] = K[s+1, t+1] + K[s, t] - K[s+1, t] - K[s, t+1]. See Algo 
+    3 in https://jmlr.org/papers/v20/16-314.html.
+
+    Args:
+        nabla (Tensor): Matrix of shape (..., T1, T2).
+        trunc_level (int): Truncation level of the signature.
+    """
+    sh = nabla.shape
+    A = nabla.clone()
+    results = torch.empty(sh[:-2]+(trunc_level,),
+                          device=nabla.device, dtype=nabla.dtype)
+    results[..., 0] = 1 + A.sum(dim = (-2, -1))
+    for n in range(1, trunc_level):
+        A = nabla * cumsum_shift1(cumsum_shift1(A, dim=-2), dim=-1)
+        results[..., n] = 1 + A.sum(dim = (-2, -1))
+
     if only_last:
         return results[..., -1]
     else:
@@ -115,27 +143,16 @@ class TruncSigKernel(TimeSeriesKernel):
         self.only_last = only_last
 
 
-    def _batched_ker(
+    def _gram(
             self, 
             X: Tensor, 
-            Y: Tensor, 
+            Y: Tensor,
+            diag: bool,
         ):
-        """
-        Computes the Gram matrix K(X_i, Y_j), or the diagonal K(X_i, Y_i) 
-        if diag=True. The time series in X and Y are assumed to be of shape 
-        (T1, d) and (T2, d) respectively. O(T^2(d + trunc_level*geo_order^2)) 
-        time for each pair of time series.
-
-        Args:
-            X (Tensor): Tensor with shape (N, T1, d).
-            Y (Tensor): Tensor with shape (N, T2, d).
-            diag (bool, optional): If True, only computes the kernel for the 
-                pairs K(X_i, Y_i). Defaults to False.
-
-        Returns:
-            Tensor: Tensor with shape (N1, N2), or (N1) if diag=True.
-        """
         # nabla_st = K[s+1, t+1] + K[s, t] - K[s+1, t] - K[s, t+1] in time
-        K = self.static_kernel.time_gram(X, Y, diag=True)
+        K = self.static_kernel.time_gram(X, Y, diag)
         nabla = K.diff(dim=-1).diff(dim=-2) # shape (N, T1, T2)
-        return trunc_sigker(nabla, self.trunc_level, self.geo_order, self.only_last)
+        if self.geo_order >= 2:
+            return trunc_sigker_geoGEQ2(nabla, self.trunc_level, self.geo_order, self.only_last)
+        else:
+            return trunc_sigker_geo1(nabla, self.trunc_level, self.only_last)

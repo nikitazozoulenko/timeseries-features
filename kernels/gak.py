@@ -126,11 +126,12 @@ class GlobalAlignmentKernel(TimeSeriesKernel):
         return True
 
 
-    def _batched_ker(
+    def _gram(
             self, 
             X: Tensor,
             Y: Tensor,
+            diag: bool,
         ):
         # K shape (N, T1, T2)
-        K = self.static_kernel.time_gram(X, Y, diag=True)
+        K = self.static_kernel.time_gram(X, Y, diag)
         return log_global_align(K)
