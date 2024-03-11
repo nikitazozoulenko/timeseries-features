@@ -40,7 +40,7 @@ class StaticIntegralKernel(TimeSeriesKernel):
             diag: bool,
         ):
         # Shape (N, T)
-        ijKt = self.static_kernel(X, Y, diag=True)
+        ijKt = self.static_kernel(X, Y, diag)
 
         #return integral of k(x_t, y_t) dt for each pair x and y
         T = X.shape[-2]

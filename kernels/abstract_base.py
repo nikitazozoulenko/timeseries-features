@@ -217,9 +217,9 @@ class TimeSeriesKernel():
 
         # split into batches
         split_X = torch.split(X, max_batch, dim=0)
-        Y_max_batch = max(1, max_batch//N1)
+        Y_max_batch = max(1, max_batch//N1) if not diag else max_batch
         split_Y = torch.split(Y, Y_max_batch, dim=0)
-        split = zip(split_X, split_X) if diag else itertools.product(split_X, split_Y)
+        split = zip(split_X, split_Y) if diag else itertools.product(split_X, split_Y)
         result = Parallel(n_jobs=n_jobs)(
             delayed(self._gram)(x, y, diag) for x,y in split
             )
@@ -237,7 +237,7 @@ class TimeSeriesKernel():
         if normalize:
             #Obtain the diagonals k(X,X) and K(Y,Y)
             if X is Y:
-                diagonal = torch.einsum('ii...->i...', result) #shape (N, ...)
+                diagonal = result if diag else torch.einsum('ii...->i...', result) #shape (N, ...)
                 XX = diagonal
                 YY = diagonal
             else:
