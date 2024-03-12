@@ -54,16 +54,17 @@ def update_antidiag(
     elif t == 0:
         logK[..., s, 0] += logK[..., s-1, 0]
     else:
-        logK[..., s, t] += torch.log(
-            torch.exp(logK[..., s-1, t-1]) + 
-            torch.exp(logK[..., s-1, t  ]) + 
-            torch.exp(logK[..., s  , t-1])
-        )
+        logK[..., s, t] += torch.logsumexp(
+            torch.stack([
+                logK[..., s-1, t-1],
+                logK[..., s-1, t  ],
+                logK[..., s  , t-1],
+                ]),
+                dim=0
+            )
 
 
 
-# My PyTorch implementation is 60x faster compared to tslearn.metrics.cdist_gak (GPU vs GPU),
-# but ksig's cuda version is still 10x faster than mine though. JAX is probably even faster
 @torch.jit.script
 def log_global_align(
         K:Tensor, 
