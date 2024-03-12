@@ -49,7 +49,7 @@ class RBFKernel(StaticKernel):
             scale:float = 1.0
         ):
         """
-        The RBF kernel k(x, y) = scale *e^(-sigma * |x-y|^2) on R^d.
+        The RBF kernel k(x, y) = scale *e^(|x-y|^2 / 2sigma^2 ) on R^d.
 
         Args:
             sigma (float, optional): RBF parameter. Defaults to 1.0.
