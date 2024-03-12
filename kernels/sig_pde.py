@@ -87,8 +87,16 @@ class SigPDEKernel(TimeSeriesKernel):
             Y: Tensor,
             diag: bool,
         ):
+        # sigker required float64, otherwise we get an error
+        X = X.double()
+        Y = Y.double()
+        
+        #get gram matrix
         if diag:
-            return self.sig_ker.compute_kernel(X, Y)
+            gram = self.sig_ker.compute_kernel(X, Y)
         else:
-            return self.sig_ker.compute_Gram(X, Y)
+            gram = self.sig_ker.compute_Gram(X, Y)
+        
+        #recast and return
+        return gram.to(dtype=X.dtype)
 
