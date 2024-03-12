@@ -54,13 +54,14 @@ def update_antidiag(
     elif t == 0:
         logK[..., s, 0] += logK[..., s-1, 0]
     else:
-        logK[..., s, t] += torch.logsumexp(
-            torch.stack([
-                logK[..., s-1, t-1],
-                logK[..., s-1, t  ],
-                logK[..., s  , t-1],
-                ]),
-                dim=0
+        logM00 = logK[..., s-1, t-1]
+        logM01 = logK[..., s-1, t  ]
+        logM10 = logK[..., s  , t-1]
+        logMmax = torch.maximum(torch.maximum(logM00, logM01), logM10)
+        logK[..., s, t] += logMmax + torch.log(
+            torch.exp(logM00 - logMmax) +
+            torch.exp(logM01 - logMmax) +
+            torch.exp(logM10 - logMmax)
             )
 
 
