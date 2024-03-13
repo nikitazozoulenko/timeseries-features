@@ -2,8 +2,6 @@ from typing import List, Dict, Set, Any, Optional, Tuple, Literal, Callable
 import numpy as np
 import torch
 from torch import Tensor
-import torch
-import numpy as np
 
 class RBF_RandomFourierFeatures:
     def __init__(
