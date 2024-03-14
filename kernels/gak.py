@@ -39,34 +39,28 @@ def sigma_gak(
 
 
 @torch.jit.script
-def update_antidiag(
+def gak_update_antidiag(
         logK:Tensor,
         s:int,
         t:int,
     ):
     """
-    Function to be used in the computation of the GAK kernel. 
+    Function to be used in the computation of the GAK kernel.
+    Note that s,t>0
     """
-    if s == 0 and t == 0:
-        logK[..., 0, 0] += 0
-    elif s == 0:
-        logK[..., 0, t] += logK[..., 0, t-1]
-    elif t == 0:
-        logK[..., s, 0] += logK[..., s-1, 0]
-    else:
-        logM00 = logK[..., s-1, t-1]
-        logM01 = logK[..., s-1, t  ]
-        logM10 = logK[..., s  , t-1]
-        logMmax = torch.maximum(torch.maximum(logM00, logM01), logM10)
-        logK[..., s, t] += logMmax + torch.log(
-            torch.exp(logM00 - logMmax) +
-            torch.exp(logM01 - logMmax) +
-            torch.exp(logM10 - logMmax)
-            )
+    logM00 = logK[..., s-1, t-1]
+    logM01 = logK[..., s-1, t  ]
+    logM10 = logK[..., s  , t-1]
+    logMmax = torch.maximum(torch.maximum(logM00, logM01), logM10)
+    logK[..., s, t] += logMmax + torch.log(
+        torch.exp(logM00 - logMmax) +
+        torch.exp(logM01 - logMmax) +
+        torch.exp(logM10 - logMmax)
+        )
 
 
 
-@torch.jit.script
+#@torch.jit.script
 def log_global_align(
         K:Tensor, 
     ):
@@ -85,12 +79,15 @@ def log_global_align(
     EPS = 1e-10
     logK = torch.log(torch.clamp(K, min=EPS))
 
-    #iterate over antidiagonals
-    for diag in range(T1+T2-1):
+    #first do s=0, t=0
+    logK[..., :, 0] = logK[..., :, 0].cumsum(dim=-1)
+    logK[..., 0, :] = logK[..., 0, :].cumsum(dim=-1)
+    #iterate over antidiagonals with s,t>0
+    for diag in range(2, T1+T2-1):
         futures : List[torch.jit.Future[None]] = []
-        for s in range(max(0, diag - T2 + 1), min(diag + 1, T1)):
+        for s in range(max(1, diag - T2 + 1), min(diag, T1)):
             t = diag - s
-            futures.append( torch.jit.fork(update_antidiag, logK, s, t) )
+            futures.append( torch.jit.fork(gak_update_antidiag, logK, s, t) )
         [torch.jit.wait(fut) for fut in futures]
     return logK[..., -1, -1]
 

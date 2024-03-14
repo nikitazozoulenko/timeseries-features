@@ -3,8 +3,6 @@ import torch
 from torch import Tensor
 from kernels.sig_trunc import cumsum_shift1
 
-
-
 ###################################################################  |
 ################# For the RBF-lifted signature ####################  |
 ################################################################### \|/
@@ -147,7 +145,7 @@ class TRP_RFSF_Gaussian():
         features = tensorised_random_projection_features(
             X, self.trunc_level, self.rff_weights, self.P
             )
-        #TODO stack with 1
+
         if self.only_last:
             return features[-1]
         else:

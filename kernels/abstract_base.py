@@ -119,7 +119,7 @@ class StaticKernel():
 
         Args:
             X (Tensor): Tensor with shape (N1, ..., d).
-            Y (Tensor): Tensor with shape (N2, ..., d).
+            Y (Tensor): Tensor with shape (N2, ..., d), with (...) same as X.
             diag (bool, optional): If True, only computes the kernel for the
 
         Returns:
@@ -135,6 +135,40 @@ class StaticKernel():
             norms_squared = -2*xy + xx[:, None] + yy[None, :]
 
         return norms_squared
+    
+
+    def time_square_dist(
+            self, 
+            X: Tensor, 
+            Y: Tensor,
+            diag: bool = False,
+        )->Tensor:
+        """
+        Outputs ||X^i_s - Y^j_t||^2, with optional diagonal support across
+        the batch dimension.
+
+        Args:
+            X (Tensor): Tensor with shape (N1, T1, d).
+            Y (Tensor): Tensor with shape (N2, T2, d).
+            diag (bool, optional): If True, only computes the kernel for the 
+                pairs k(X_i, Y_i). Defaults to False.
+
+        Returns:
+            Tensor: Tensor with shape (N1, N2, T1, T2) or (N1, T1, T2) if diag=True.
+        """
+        N1, T1, d = X.shape
+        N2, T2, d = Y.shape
+        if diag:
+            X = X.permute(1, 0, 2) # shape (T1, N1, d)
+            Y = Y.permute(1, 0, 2) # shape (T2, N2, d)
+            trans_gram = self(X, Y) # shape (T1, T2, N)
+            return trans_gram.permute(2, 0, 1)
+        else:
+            X = X.reshape(N1 * T1, d)
+            Y = Y.reshape(N2 * T2, d)
+            norms_squared = self.squared_dist(X, Y) # shape (N1 * T1, N2 * T2)
+            return norms_squared.reshape(N1,T1,N2,T2).permute(0, 2, 1, 3)
+
 
 
 ##################################################################  |

@@ -24,6 +24,7 @@ class StaticIntegralKernel(TimeSeriesKernel):
         """
         Treats a time series as a big vector in R^(Td), where T is the 
         length of the time series and d is the state-space dimension.
+        K(x,y) = k(flat(x), flat(y)) / T.
 
         Args:
             static_kernel (StaticKernel): Static kernel on R^d.
@@ -38,7 +39,7 @@ class StaticIntegralKernel(TimeSeriesKernel):
             Y: Tensor,
             diag: bool,
         ):
-        N = X.shape[0]
+        N, T, d = X.shape
         X_flat = X.reshape(N, -1)
         Y_flat = Y.reshape(N, -1)
-        return self.static_kernel(X_flat, Y_flat, diag)
+        return self.static_kernel(X_flat, Y_flat, diag) / T
