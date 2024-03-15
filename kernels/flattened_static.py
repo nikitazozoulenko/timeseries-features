@@ -14,7 +14,7 @@ from kernels.static_kernels import RBFKernel
 #######################################################################################
 
 
-class StaticIntegralKernel(TimeSeriesKernel):
+class FlattenedStaticKernel(TimeSeriesKernel):
     def __init__(
             self,
             static_kernel:StaticKernel = RBFKernel(),
@@ -40,6 +40,7 @@ class StaticIntegralKernel(TimeSeriesKernel):
             diag: bool,
         ):
         N, T, d = X.shape
+        N2, T, d = Y.shape
         X_flat = X.reshape(N, -1)
-        Y_flat = Y.reshape(N, -1)
+        Y_flat = Y.reshape(N2, -1)
         return self.static_kernel(X_flat, Y_flat, diag) / T

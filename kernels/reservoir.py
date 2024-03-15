@@ -13,8 +13,8 @@ from kernels.static_kernels import LinearKernel
 class ReservoirKernel(TimeSeriesKernel):
     def __init__(
             self,
-            tau:float,
-            gamma:float,
+            tau:float = 10,
+            gamma:float = 0.1,
             max_batch:int = 1000,
             normalize:bool = False,
         ):
