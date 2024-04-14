@@ -60,7 +60,7 @@ def gak_update_antidiag(
 
 
 
-#@torch.jit.script
+@torch.jit.script
 def log_global_align(
         K:Tensor, 
     ):
