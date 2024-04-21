@@ -3,6 +3,9 @@ import torch
 from torch import Tensor
 import signatory
 
+from sklearn.base import TransformerMixin, BaseEstimator
+
+
 
 def sig(
     X: Tensor,
@@ -47,3 +50,57 @@ def logsig(
     if len(X.shape) == 2:
         X = X.unsqueeze(0)
     return signatory.logsignature(X, trunc_level).squeeze(0)
+
+
+
+class SigTransform(TransformerMixin, BaseEstimator):
+    def __init__(
+            self,
+            trunc_level: int = 3, #signature truncation level
+        ):
+        """
+        Summary
+
+        Args:
+            n_features (int): _description_. Defaults to 500.
+            trunc_level (int): _description_. Defaults to 3.
+        """
+        self.trunc_level = trunc_level
+
+
+    def fit(self, X: Tensor, y=None):
+        return self
+
+
+    def transform(
+            self,
+            X:Tensor,
+        ):
+        return sig(X, self.trunc_level)
+
+
+
+class LogSigTransform(TransformerMixin, BaseEstimator):
+    def __init__(
+            self,
+            trunc_level: int = 3, #signature truncation level
+        ):
+        """
+        Summary
+
+        Args:
+            n_features (int): _description_. Defaults to 500.
+            trunc_level (int): _description_. Defaults to 3.
+        """
+        self.trunc_level = trunc_level
+
+
+    def fit(self, X: Tensor, y=None):
+        return self
+
+
+    def transform(
+            self,
+            X:Tensor,
+        ):
+        return logsig(X, self.trunc_level)

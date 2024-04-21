@@ -29,8 +29,8 @@ def z_score_normalize(
         'train' and 'test' normalized by the mean and std of 'train'.
     """
     assert_ndim_geq(train, 1)
-    mean = torch.mean(train, axis=0, keepdims=True)
-    std = torch.std(train, axis=0, keepdims=True)
+    mean = train.mean(axis=0, keepdims=True)
+    std = train.std(axis=0, keepdims=True)
     train = (train - mean) / (std+epsilon)
     test = (test - mean) / (std+epsilon)
     return train, test
@@ -135,6 +135,7 @@ def add_basepoint_zero(
 
 
 
+
 def I_visibility_transform(X:Tensor):
     """
     Performs the I-visiblity transform on 'X', see page 5 of
@@ -200,3 +201,31 @@ def T_visibility_transform(X:Tensor):
 
     # reshape back to original shape
     return X.reshape(original_shape[:-2] + (T+2, d+1))
+
+
+
+
+def normalize_streams(train:Tensor, 
+                      test:Tensor,
+                      max_T:int = 100,
+                      ):
+    """Inputs are 3D arrays of shape (N, T, d) where N is the number of time series, 
+    T is the length of each time series, and d is the dimension of each time series.
+    Performs average pooling to reduce the length of the time series to at most max_T,
+    z-score normalization, basepoint addition, and time augmentation.
+    """
+    # Make time series length smaller
+    _, T, d = train.shape
+    if T > max_T:
+        pool_size = 1 + (T-1) // max_T
+        train = avg_pool_time(train, pool_size)
+        test = avg_pool_time(test, pool_size)
+
+    # Normalize data by training set mean and std
+    train, test = z_score_normalize(train, test)
+
+    # clip to avoid numerical instability
+    c = 5.0
+    train = train.clip(-c, c)
+    test = test.clip(-c, c)
+    return train, test
