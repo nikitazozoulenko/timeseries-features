@@ -167,11 +167,12 @@ def linear_tensorised_random_projection_features(
     """
     #first level
     D = P.shape[-1]
-    V = X.diff(dim=-2) @ P[0] / D**0.5  #shape (..., T-1, D)
+    Xdiff = X.diff(dim=-2)
+    V = Xdiff @ P[0] / D**0.5  #shape (..., T-1, D)
 
     #subsequent levels
     for m in range(1, trunc_level):
-        U = X.diff(dim=-2) @ P[m] #shape (..., T-1, D)
+        U = Xdiff @ P[m] #shape (..., T-1, D)
         V = cumsum_shift1(V, dim=-2) * U #shape (..., T-1, D)
     
     return V.sum(dim=-2) #shape (..., D)

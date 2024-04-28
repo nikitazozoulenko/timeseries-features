@@ -52,8 +52,7 @@ def randomized_sig_linear(
         Y_0:Tensor,
     ):
     """
-    Randomized signature of a (batched) time series X, with tanh
-    activation function.
+    Randomized signature of a (batched) time series X
 
     Args:
         X (Tensor): Input tensor of shape (N, T, d).
@@ -114,7 +113,7 @@ class RandomizedSignature():
                              device=device,
                              dtype=dtype,
                              generator=gen
-                             ) / np.sqrt(self.n_features * d)
+                             ) / np.sqrt(self.n_features * d * T)
         self.b = torch.randn(self.n_features,
                              d,
                              device=device,
